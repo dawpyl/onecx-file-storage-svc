@@ -15,10 +15,10 @@ public interface MetadataMapper {
     @Mapping(target = "storage", ignore = true)
     @Mapping(target = "size", expression = "java(head.contentLength())")
     @Mapping(target = "type", expression = "java(head.contentType())")
-    FileMetadataResponseDTOV1 map(HeadObjectResponse head);
+    FileMetadataResponseDTOV1 map(HeadObjectResponse head, String fileName);
 
     @AfterMapping
-    default void setDefaultValues(HeadObjectResponse source,
+    default void setDefaultValues(HeadObjectResponse source, String fileName,
             @MappingTarget FileMetadataResponseDTOV1 target) {
         target.setSizeUnit("BYTES");
         target.setStorage("rustfs");

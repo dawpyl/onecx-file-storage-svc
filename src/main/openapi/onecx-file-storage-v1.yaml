@@ -266,6 +266,8 @@ components:
           type: string
         type:
           type: string
+        fileName:
+          type: string
     ProblemDetailResponse:
       type: object
       properties:

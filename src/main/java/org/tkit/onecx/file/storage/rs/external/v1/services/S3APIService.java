@@ -144,10 +144,9 @@ public class S3APIService {
 
     public List<FileMetadataResponseDTOV1> getMetadataForFiles(final List<FileMetadataRequestDTOV1> metadataRequests) {
         final var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
-        final var headResponses = metadataRequests.stream()
+        return metadataRequests.stream()
                 .map(request -> processHeadObject(tenantId, request))
                 .toList();
-        return headResponses.stream().map(metadataMapper::map).toList();
     }
 
     private String buildFilePath(String tenantId, String productName, String applicationId, String fileName) {
@@ -170,12 +169,13 @@ public class S3APIService {
         }
     }
 
-    private HeadObjectResponse processHeadObject(final String tenantId, final FileMetadataRequestDTOV1 request) {
+    private FileMetadataResponseDTOV1 processHeadObject(final String tenantId, final FileMetadataRequestDTOV1 request) {
         final var fileName = buildFilePath(tenantId, request.getProductName(), request.getApplicationId(),
                 request.getFileName());
         final var headRequest = getHeadObjectRequest(fileName);
         try {
-            return s3Client.headObject(headRequest);
+            final var headObject = s3Client.headObject(headRequest);
+            return metadataMapper.map(headObject, request.getFileName());
         } catch (Exception e) {
             throw new WebApplicationException("Error retrieve file " + fileName);
         }
