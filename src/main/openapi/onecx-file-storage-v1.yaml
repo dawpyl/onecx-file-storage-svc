@@ -250,10 +250,6 @@ components:
         size:
           type: integer
           format: int64
-        sizeUnit:
-          type: string
-        storage:
-          type: string
         type:
           type: string
         fileName:
