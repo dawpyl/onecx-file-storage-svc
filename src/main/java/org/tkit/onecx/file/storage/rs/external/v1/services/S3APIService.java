@@ -11,9 +11,9 @@ import java.util.List;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.resteasy.reactive.ClientWebApplicationException;
 import org.tkit.onecx.file.storage.rs.external.v1.mappers.MetadataMapper;
 import org.tkit.onecx.file.storage.rs.external.v1.mappers.PresignedUrlMapper;
 import org.tkit.quarkus.context.ApplicationContext;
@@ -38,9 +38,6 @@ public class S3APIService {
     @ConfigProperty(name = "onecx.file.storage.bucket")
     private String bucketName;
 
-    @ConfigProperty(name = "onecx.file.storage.default-tenant-id")
-    private String defaultTenantId;
-
     @Inject
     S3Client s3Client;
 
@@ -61,7 +58,7 @@ public class S3APIService {
     }
 
     public PresignedUrlResponseDTOV1 getPresignedDownloadUrl(String fileId, String productName, String applicationId) {
-        var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         var filePath = buildFilePath(tenantId, productName, applicationId, fileId);
 
         GetObjectRequest objectRequest = GetObjectRequest.builder()
@@ -80,7 +77,7 @@ public class S3APIService {
     }
 
     public PresignedUrlResponseDTOV1 getPresignedUploadUrl(String id, String productName, String applicationId) {
-        var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         var filePath = buildFilePath(tenantId, productName, applicationId, id);
 
         PutObjectRequest objectRequest = PutObjectRequest.builder()
@@ -105,12 +102,12 @@ public class S3APIService {
         } catch (NoSuchBucketException e) {
             return false;
         } catch (SdkException ex) {
-            throw new WebApplicationException("Error checking bucket existence: " + ex.getMessage(), ex);
+            throw new ClientWebApplicationException("Error checking bucket existence: " + ex.getMessage(), ex);
         }
     }
 
     public void uploadFile(String fileId, InputStream data, String productName, String applicationId) throws Exception {
-        var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         var filePath = buildFilePath(tenantId, productName, applicationId, fileId);
 
         BufferedInputStream buffered = new BufferedInputStream(data);
@@ -131,7 +128,7 @@ public class S3APIService {
     }
 
     public ResponseInputStream<GetObjectResponse> downloadFile(String fileId, String productName, String applicationId) {
-        var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         var filePath = buildFilePath(tenantId, productName, applicationId, fileId);
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
@@ -143,7 +140,7 @@ public class S3APIService {
     }
 
     public List<FileMetadataResponseDTOV1> getMetadataForFiles(final List<FileMetadataRequestDTOV1> metadataRequests) {
-        final var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         return metadataRequests.stream()
                 .map(request -> processHeadObject(tenantId, request))
                 .toList();
@@ -154,7 +151,7 @@ public class S3APIService {
     }
 
     public void deleteFile(String fileId, String productName, String applicationId) {
-        var tenantId = ApplicationContext.get().hasTenantId() ? ApplicationContext.get().getTenantId() : defaultTenantId;
+        var tenantId = ApplicationContext.get().getTenantId();
         var filePath = buildFilePath(tenantId, productName, applicationId, fileId);
 
         try {
@@ -165,7 +162,7 @@ public class S3APIService {
 
             s3Client.deleteObject(deleteObjectRequest);
         } catch (SdkException ex) {
-            throw new WebApplicationException("Error deleting file: " + ex.getMessage(), ex);
+            throw new ClientWebApplicationException("Error deleting file: " + ex.getMessage(), ex);
         }
     }
 
@@ -177,7 +174,7 @@ public class S3APIService {
             final var headObject = s3Client.headObject(headRequest);
             return metadataMapper.map(headObject, request.getFileName());
         } catch (Exception e) {
-            throw new WebApplicationException("Error retrieve file " + fileName);
+            throw new ClientWebApplicationException("Error retrieve file " + fileName);
         }
     }
 

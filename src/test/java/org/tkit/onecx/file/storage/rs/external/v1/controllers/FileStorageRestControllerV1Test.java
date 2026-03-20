@@ -34,7 +34,26 @@ class FileStorageRestControllerV1Test extends AbstractTest {
 
     @Test
     void uploadAndDownloadFileTest() {
-        byte[] fileContent = "onecx file content".getBytes(StandardCharsets.UTF_8);
+
+        // no magic bytes, should be detected as "application/octet-stream"
+        byte[] fileContentfallback = "onecx file content".getBytes(StandardCharsets.UTF_8);
+
+        given()
+                .auth().oauth2(token)
+                .header(APM_HEADER_PARAM, idToken)
+                .multiPart("applicationId", "app1")
+                .multiPart("productName", "product1")
+                .multiPart("fileName", "my-file-2.txt")
+                .multiPart("file", "my-file-2.txt", fileContentfallback, null)
+                .when()
+                .post("/v1/file-storage/file/upload")
+                .then()
+                .statusCode(201);
+
+        // Minimal PNG magic bytes - URLConnection.guessContentTypeFromStream detects this as "image/png"
+        byte[] fileContent = new byte[] {
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A // PNG signature
+        };
 
         given()
                 .auth().oauth2(token)
@@ -63,7 +82,7 @@ class FileStorageRestControllerV1Test extends AbstractTest {
                 .post("/v1/file-storage/file/download")
                 .then()
                 .statusCode(200)
-                .contentType("application/octet-stream")
+                .contentType("image/png")
                 .extract()
                 .asByteArray();
     }
@@ -163,7 +182,10 @@ class FileStorageRestControllerV1Test extends AbstractTest {
 
     @Test
     void getMetadataForFilesTest() {
-        byte[] fileContent = "onecx file content".getBytes(StandardCharsets.UTF_8);
+        // Minimal PNG magic bytes - URLConnection.guessContentTypeFromStream detects this as "image/png"
+        byte[] fileContent = new byte[] {
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A // PNG signature
+        };
 
         given()
                 .auth().oauth2(token)
@@ -212,7 +234,7 @@ class FileStorageRestControllerV1Test extends AbstractTest {
                 .when()
                 .post("/v1/file-storage/file/metadata")
                 .then()
-                .statusCode(500);
+                .statusCode(400);
     }
 
     @Test
